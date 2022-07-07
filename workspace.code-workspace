@@ -1,0 +1,55 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "arduino_v1",
+			"path": "arduino_v1"
+		},
+		{
+			"name": "protopie_connect_testing",
+			"path": "protopie_connect_testing"
+		},
+		{
+			"name": "display_test_oled_SSD1306",
+			"path": "display_test_oled_SSD1306"
+		},
+		{
+			"name": "display_test_oled_SSH1106",
+			"path": "display_test_oled_SSH1106"
+		},
+		{
+			"name": "stepper_motor",
+			"path": "stepper_motor"
+		},
+		{
+			"path": "motor_brushless"
+		},
+		{
+			"name": "magnetic_encoder",
+			"path": "magnetic_encoder"
+		},
+		{
+			"name": "button_test",
+			"path": "button_test"
+		},
+		{
+			"name": "display_test_tft",
+			"path": "display_test_tft"
+		},
+		{
+			"name": "mega",
+			"path": "mega"
+		},
+		{
+			"name": "220701_combined_v1",
+			"path": "220701_combined_v1"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"string": "cpp"
+		}
+	}
+}
