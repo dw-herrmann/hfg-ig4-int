@@ -96,11 +96,11 @@ public:
 
   // parameter value range, {min, max, steps per dial rotation}
   int parameterValueRange[5][3] = {
-      {1, 60, 60},   // Frequenz
-      {6, 60, 60},   // Phoch
+      {1, 60, 40},   // Frequenz
+      {6, 60, 40},   // Phoch
       {0, 19, 20},   // PEEP
-      {21, 100, 60}, // FiO2
-      {0, 0, 60},    // custom
+      {21, 100, 40}, // FiO2
+      {0, 0, 40},    // custom
   };
 
   // display of parameter
@@ -124,23 +124,31 @@ public:
     {
       currentParameter = selectedParameter;
 
-      // (re)set all encoder values
-      currentEncoderVal[0] = ams5600.getRawAngle();
-      currentEncoderVal[1] = ams5600.getRawAngle();
-      currentEncoderVal[2] = ams5600.getRawAngle();
-      currentEncoderVal[3] = 0;
+      if (selectedParameter != -1)
+      {
+        // (re)set all encoder values
+        currentEncoderVal[0] = ams5600.getRawAngle();
+        currentEncoderVal[1] = ams5600.getRawAngle();
+        currentEncoderVal[2] = ams5600.getRawAngle();
+        currentEncoderVal[3] = 0;
 
-      valOnClick = parameterValues[selectedParameter];
-      disableParametersAll(selectedParameter);
+        valOnClick = parameterValues[selectedParameter];
+        disableParametersAll(selectedParameter);
+        api_send("ap_start");
+      }
+      else
+      {
+        api_send("ap_stop");
+        disableParametersAll();
+      }
 
-      api("activateParameter");
       return;
     }
     else
     {
       disableParametersAll();
       currentParameter = -1;
-      api("disableParameter");
+      api_send("ap_stop");
       return;
     }
   };
@@ -225,27 +233,8 @@ public:
         parameterValues[currentParameter] = parameterValueRange[currentParameter][1];
       }
 
-      // if (parameterValues[currentParameter] > parameterValueRange[currentParameter][1]) // if above max
-      // {
-      //   // set current back to max
-      //   parameterValues[currentParameter] = parameterValueRange[currentParameter][1];
-      //   // set first on press to current - full range
-      //   currentEncoderVal[2] = currentEncoderVal[0] - (parameterValueRange[currentParameter][1] * stepSize);
-      //   // reset rotations
-      //   // int fullRange = (parameterValueRange[currentParameter][1] - parameterValueRange[currentParameter][0]) * stepSize;
-      //   // currentEncoderVal[3] = fullRange / parameterValueRange[currentParameter][2];
-      // }
-      // else if (parameterValues[currentParameter] < parameterValueRange[currentParameter][0]) // if below min
-      // {
-      //   parameterValues[currentParameter] = parameterValueRange[currentParameter][0]; // set to min
-      //   // currentEncoderVal[2] = currentEncoderVal[0];                                  // set first on press to current
-      //   // currentEncoderVal[3] = 0;                                                     // reset rotations
-
-      //   // print
-      // }
-
       // api
-      api("updateCurrentValue");
+      api_send("ap_update");
       return;
     }
   }
@@ -265,7 +254,7 @@ public:
         // if main dial
         if (button == 4)
         {
-          Serial.println("dial pressed");
+          Serial.println(">> dial pressed");
 
           if (currentParameter != -1)
           {
@@ -276,7 +265,7 @@ public:
         else
         {
           // recognize change
-          Serial.println("button pressed");
+          Serial.println(">> button " + String(button) + " pressed");
 
           // state toggle
           activateParameter(button);
@@ -289,11 +278,11 @@ public:
 
         if (button == 4)
         {
-          Serial.println("dial released");
+          Serial.println(">> dial released");
         }
         else
         {
-          Serial.println("button released");
+          Serial.println(">> button " + String(button) + " released");
         }
       }
     }
@@ -365,109 +354,109 @@ public:
   // string of received message
   char receivedMessage[100] = "";
 
-  void api(
+  void api_send(
       String message = "" /* message to send */,
       String value = "" /* value to send */)
   {
 
     // SEND
-    if (api_active & message != "")
+    if (message == "ap_start")
     {
-      // switch
-      if (message == "activateParameter") // start interaction with displays and dial
-      {
-        Serial.println("currentParameter|| " + String(currentParameter));
-        Serial.println("currentName|| " + String(parameterNames[currentParameter]));
-        Serial.println("parameterValueRangeMin|| " + String(parameterValueRange[currentParameter][0]));
-        Serial.println("parameterValueRangeMax|| " + String(parameterValueRange[currentParameter][1]));
-        Serial.println("setupCurrentValue|| " + String(parameterValues[currentParameter]));
+      // setup slider
+      Serial.println("currentParameter||" + String(currentParameter));
+      Serial.println("currentName||" + String(parameterNames[currentParameter]));
+      Serial.println("parameterValueRangeMin||" + String(parameterValueRange[currentParameter][0]));
+      Serial.println("parameterValueRangeMax||" + String(parameterValueRange[currentParameter][1]));
+      Serial.println("ap_update||" + String(parameterValues[currentParameter]));
+      Serial.println("ap_start");
 
-        // change encoder first value to fit slider value
-        int stepSize = 4096 / parameterValueRange[currentParameter][2];
-        currentEncoderVal[2] = currentEncoderVal[0] - (parameterValues[currentParameter] * stepSize);
-
-        return;
-      }
-      else if (message == "updateCurrentValue") // update slider, if change detected
-      {
-        // check for changes
-
-        if (parameterValues[currentParameter] != parameterValuePrev)
-        {
-          // send message
-          Serial.println("updateCurrentValue|| " + String(parameterValues[currentParameter]));
-
-          // set previous value
-          parameterValuePrev = parameterValues[currentParameter];
-        }
-
-        return;
-      }
-      else if (message == "disableParameter") // stop interaction with displays and dial
-      {
-        Serial.println("reset");
-        return;
-      }
+      return;
     }
+
+    if (message == "ap_stop")
+    {
+      Serial.println("ap_stop");
+
+      return;
+    }
+
+    if (message == "ap_update")
+    {
+      // if value has changed
+      if (parameterValues[currentParameter] != parameterValuePrev)
+      {
+        Serial.println("ap_update||" + String(parameterValues[currentParameter]));
+        parameterValuePrev = parameterValues[currentParameter];
+      }
+
+      return;
+    }
+  }
+
+  void api_receive()
+  {
+    // if (false)
+    // {
+
+    //   // receive parameter
+    //   while (Serial.available() > 0)
+    //   {                                                       // Take out strings until Serial is empty
+    //     String receivedString = Serial.readStringUntil('\0'); // From 1.9.0 version, We can use '\0' as delimiter in Arduino Serial
+    //     receivedData = getMessage(receivedString);
+    //   }
+
+    //   // RECEIVE
+    //   if (receivedData.message == "pa_start")
+    //   {
+
+    //     return;
+    //   }
+
+    //   if (receivedData.message == "pa_stop")
+    //   {
+
+    //     return;
+    //   }
+
+    //   if (receivedData.message == "pa_update")
+    //   {
+
+    //     return;
+    //   }
+
+    //   // data
+    //   if (receivedData.message == "currentParameter")
+    //   {
+    //     currentParameter = receivedData.value;
+    //     return;
+    //   }
+
+    //   if (receivedData.message == "currentName")
+    //   {
+    //     parameterNames[currentParameter] = receivedData.value;
+    //     return;
+    //   }
+
+    //   if (receivedData.message == "parameterValueRangeMin")
+    //   {
+    //     parameterValueRange[currentParameter][0] = receivedData.value;
+    //     return;
+    //   }
+
+    //   if (receivedData.message == "parameterValueRangeMax")
+    //   {
+    //     parameterValueRange[currentParameter][1] = receivedData.value;
+    //     return;
+    //   }
+
+    //   if (receivedData.message == "currentValue")
+    //   {
+    //     parameterValues[currentParameter] = receivedData.value;
+    //     return;
+    //   }
     // }
 
-    // // // // receive parameter
-    while (Serial.available() > 0)
-    {                                                       // Take out strings until Serial is empty
-      String receivedString = Serial.readStringUntil('\0'); // From 1.9.0 version, We can use '\0' as delimiter in Arduino Serial
-      receivedData = getMessage(receivedString);
-    }
 
-    // RECEIVE
-
-    // … change name, range, value usw. to new or no parameter, …
-    if (receivedData.message == "setupCurrentParameter")
-    {
-      // set current parameter iPad
-      currentParameter = 4;
-
-      // reset …
-      currentEncoderVal[3] = 0; // … startingpoint
-      currentEncoderVal[4] = 0; // … rotations
-    }
-
-    // … get min
-    else if (receivedData.message == "parameterValueRangeMin")
-    {
-      parameterValueRange[currentParameter][0] = receivedData.value.toInt();
-    }
-
-    // … get max
-    else if (receivedData.message == "parameterValueRangeMax")
-    {
-      // set parameter value range max iPad
-      parameterValueRange[currentParameter][1] = receivedData.value.toInt();
-    }
-
-    // setup current value to variable, …
-    else if (receivedData.message == "setupCurrentValue")
-    {
-      if (currentParameter == 4)
-      {
-        Serial.println("custom parameter");
-        // set parameter to value of selected parameter
-        parameterValues[4] = receivedData.value.toInt();
-      }
-    }
-
-    // disable current parameter, …
-    else if (receivedData.message == "stopCurrentParameter")
-    {
-      // set current parameter iPad
-      currentParameter = -1;
-    }
-
-    // update current value to variable, …
-    else if (receivedData.message == "updateCurrentValue")
-    {
-      // set parameter to value of selected parameter
-      parameterValues[currentParameter] = receivedData.value.toInt();
-    }
   }
 };
 
@@ -506,7 +495,7 @@ void loop(void)
     parameters.buttonPress(i);
   }
 
-  parameters.api();
+  // parameters.api();
 
   parameters.readParameter();
   parameters.drawParameter();
