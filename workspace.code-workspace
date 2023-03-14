@@ -45,6 +45,18 @@
 		{
 			"name": "220701_combined_v1",
 			"path": "220701_combined_v1"
+		},
+		{
+			"name": "220714_combined_v2",
+			"path": "220714_combined_v2"
+		},
+		{
+			"name": "220714_combined_v3",
+			"path": "220714_combined_v3"
+		},
+		{
+			"name": "test_simple_foc",
+			"path": "test_simple_foc"
 		}
 	],
 	"settings": {

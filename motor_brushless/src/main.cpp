@@ -1,13 +1,13 @@
 #include <Arduino.h>
-const byte in_A = 2;
-const byte in_B = 3;
-const byte in_C = 4;
+const byte in_A = 49;
+const byte in_B = 51;
+const byte in_C = 53;
 
-const byte en_A = 8;
-const byte en_B = 9;
-const byte en_C = 10;
+const byte en_A = 48;
+const byte en_B = 50;
+const byte en_C = 52;
 
-int speed_motor = 6;
+int speed_motor = 10;
 
 void setup()
 {
@@ -69,30 +69,32 @@ void motor_run()
   digitalWrite(in_B, 0);
   digitalWrite(en_C, 1);
   digitalWrite(in_C, 1);
-  delay(speed_motor); // Phase 6
+  delay(speed_motor);          // Phase 6
   Serial.println(speed_motor); // print out speed to serial port
 }
 
 void loop()
 {
-//   // increasing speed gradually by loop
-//   // for (int i = 0; i <= (21 - speed_motor) * 5; i++)
-//   // {
-//   // }
-//     motor_run();
+  //   // increasing speed gradually by loop
+  //   // for (int i = 0; i <= (21 - speed_motor) * 5; i++)
+  //   // {
+  //   // }
+  //     motor_run();
 
-//   if (speed_motor > 10)
-//   {
-//     speed_motor = speed_motor - 1; // increasing speed
-//   }
+  //   if (speed_motor > 10)
+  //   {
+  //     speed_motor = speed_motor - 1; // increasing speed
+  //   }
 
-//   Serial.println(speed_motor); // print out speed to serial port
+  //   Serial.println(speed_motor); // print out speed to serial port
 
-  //increasing speed gradually by loop
-  for (int i = 0; i<=(21-speed_motor)*5; i++) {
+  // increasing speed gradually by loop
+  for (int i = 0; i <= (21 - speed_motor) * 5; i++)
+  {
     motor_run();
   }
-  
-  if (speed_motor > 4) speed_motor = speed_motor - 1; //increasing speed
-  Serial.println(speed_motor);  //print out speed to serial port
+
+  if (speed_motor > 6)
+    speed_motor = speed_motor - 1; // increasing speed
+  Serial.println(speed_motor);     // print out speed to serial port
 }

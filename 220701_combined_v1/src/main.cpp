@@ -1,3 +1,5 @@
+//
+
 #include <Arduino.h>
 #include <U8g2lib.h>
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
@@ -61,6 +63,10 @@ public:
 
   // currently selected parameter
   int currentParameter = -1;
+  // -1 = no parameter selected
+  // 0-3 = fast parameters
+  // 4 = parameters or settings on the screen
+
   int valOnClick = 0;
 
   // number of parameters and displays
@@ -78,12 +84,17 @@ public:
   };
 
   // values of parameters
-  int parameterValues[5] = {12, 20, 5, 20, 0};
+  int parameterValues[5] = {
+      12,
+      20,
+      5,
+      20,
+      0};
   int parameterValuePrev = 0;
 
   // int parameterValuesChangeDetect[4] = {0, 0, 0, 0};
 
-  // parameter value range, min, max, steps per rotation
+  // parameter value range, {min, max, steps per dial rotation}
   int parameterValueRange[5][3] = {
       {1, 60, 60},   // Frequenz
       {6, 60, 60},   // Phoch
@@ -129,7 +140,7 @@ public:
     {
       disableParametersAll();
       currentParameter = -1;
-      api("activateParameter");
+      api("disableParameter");
       return;
     }
   };
@@ -149,8 +160,7 @@ public:
     }
   }
 
-  void
-  selectDisplay(int selectedDisplay)
+  void selectDisplay(int selectedDisplay)
   {
     for (int i = 0; i < numberOfParameters; i++)
     {
@@ -160,9 +170,10 @@ public:
 
   void readParameter()
   {
+    // if parameter is active, read value from encoder
     if (currentParameter != -1)
     {
-      // read sensor
+      // read encoder value
       currentEncoderVal[0] = ams5600.getRawAngle();
 
       // // // // direction
@@ -199,23 +210,42 @@ public:
 
       parameterValues[currentParameter] = valOnClick + steps;
 
-      // // // // limit
-      if (parameterValues[currentParameter] > parameterValueRange[currentParameter][1])
+      // print all values
+      // Serial.println("dr=\t" + String(direction) + "\tds=\t" + String(distance) + "\tst=\t" + String(steps) + "\tvl=\t" + String(parameterValues[currentParameter]) + "\trt=\t" + String(currentEncoderVal[3]));
+
+      // // // // // limit
+      // if value is out of range, set to min/max
+      if (parameterValues[currentParameter] < parameterValueRange[currentParameter][0]) // min
+      {
+        // set
+        parameterValues[currentParameter] = parameterValueRange[currentParameter][0];
+      }
+      else if (parameterValues[currentParameter] > parameterValueRange[currentParameter][1]) // max
       {
         parameterValues[currentParameter] = parameterValueRange[currentParameter][1];
-        // reset encoder
-        currentEncoderVal[2] = currentEncoderVal[0] - (parameterValueRange[currentParameter][1] * stepSize);
-        currentEncoderVal[3] = 0;
-      }
-      else if (parameterValues[currentParameter] < parameterValueRange[currentParameter][0])
-      {
-        parameterValues[currentParameter] = parameterValueRange[currentParameter][0];
-        currentEncoderVal[2] = currentEncoderVal[0];
-        currentEncoderVal[3] = 0;
       }
 
+      // if (parameterValues[currentParameter] > parameterValueRange[currentParameter][1]) // if above max
+      // {
+      //   // set current back to max
+      //   parameterValues[currentParameter] = parameterValueRange[currentParameter][1];
+      //   // set first on press to current - full range
+      //   currentEncoderVal[2] = currentEncoderVal[0] - (parameterValueRange[currentParameter][1] * stepSize);
+      //   // reset rotations
+      //   // int fullRange = (parameterValueRange[currentParameter][1] - parameterValueRange[currentParameter][0]) * stepSize;
+      //   // currentEncoderVal[3] = fullRange / parameterValueRange[currentParameter][2];
+      // }
+      // else if (parameterValues[currentParameter] < parameterValueRange[currentParameter][0]) // if below min
+      // {
+      //   parameterValues[currentParameter] = parameterValueRange[currentParameter][0]; // set to min
+      //   // currentEncoderVal[2] = currentEncoderVal[0];                                  // set first on press to current
+      //   // currentEncoderVal[3] = 0;                                                     // reset rotations
+
+      //   // print
+      // }
+
       // api
-      api("updateValue");
+      api("updateCurrentValue");
       return;
     }
   }
@@ -271,59 +301,66 @@ public:
 
   void drawParameter(int display = -1, bool state = false)
   {
-    if (display != -1 && display != 4)
+    // if parameter has a display
+    if (display < 4)
     {
-      selectDisplay(display);
-
-      if (state)
+      // if display was selected
+      if (display != -1)
       {
+        // select display
+        selectDisplay(display);
+
+        // and write text
+        if (state) // if active
+        {
+          u8g2.clearBuffer();
+          // set white background
+          u8g2.setDrawColor(1);
+          u8g2.drawBox(0, 0, 128, 64);
+          // set black text
+          u8g2.setDrawColor(0);
+        }
+        else
+        {
+          u8g2.clearBuffer();
+          // set black background
+          u8g2.setDrawColor(0);
+          u8g2.drawBox(0, 0, 128, 64);
+          // set white text
+          u8g2.setDrawColor(1);
+        }
+
+        u8g2.setFont(u8g2_font_logisoso16_tf);
+        u8g2.setFontPosTop();
+        u8g2.drawStr(3, 43, parameterNames[display]);
+        u8g2.setFont(u8g2_font_logisoso34_tf);
+        u8g2.setFontPosTop();
+        u8g2.drawStr(2, 3, String(parameterValues[display]).c_str());
+        u8g2.sendBuffer();
+        return;
+      }
+      // draw current parameter
+      else if (currentParameter != -1)
+      {
+        selectDisplay(currentParameter);
+
         u8g2.clearBuffer();
         // set white background
         u8g2.setDrawColor(1);
         u8g2.drawBox(0, 0, 128, 64);
         // set black text
         u8g2.setDrawColor(0);
+        u8g2.setFont(u8g2_font_logisoso16_tf);
+        u8g2.setFontPosTop();
+        u8g2.drawStr(3, 43, parameterNames[currentParameter]);
+        u8g2.setFont(u8g2_font_logisoso34_tf);
+        u8g2.setFontPosTop();
+        u8g2.drawStr(2, 3, String(parameterValues[currentParameter]).c_str());
+        u8g2.sendBuffer();
+        return;
       }
-      else
-      {
-        u8g2.clearBuffer();
-        // set black background
-        u8g2.setDrawColor(0);
-        u8g2.drawBox(0, 0, 128, 64);
-        // set white text
-        u8g2.setDrawColor(1);
-      }
-
-      u8g2.setFont(u8g2_font_logisoso16_tf);
-      u8g2.setFontPosTop();
-      u8g2.drawStr(3, 43, parameterNames[display]);
-      u8g2.setFont(u8g2_font_logisoso34_tf);
-      u8g2.setFontPosTop();
-      u8g2.drawStr(2, 3, String(parameterValues[display]).c_str());
-      u8g2.sendBuffer();
-      return;
-    }
-    // draw current parameter
-    else if (currentParameter != -1 && display != 4)
-    {
-      selectDisplay(currentParameter);
-
-      u8g2.clearBuffer();
-      // set white background
-      u8g2.setDrawColor(1);
-      u8g2.drawBox(0, 0, 128, 64);
-      // set black text
-      u8g2.setDrawColor(0);
-      u8g2.setFont(u8g2_font_logisoso16_tf);
-      u8g2.setFontPosTop();
-      u8g2.drawStr(3, 43, parameterNames[currentParameter]);
-      u8g2.setFont(u8g2_font_logisoso34_tf);
-      u8g2.setFontPosTop();
-      u8g2.drawStr(2, 3, String(parameterValues[currentParameter]).c_str());
-      u8g2.sendBuffer();
-      return;
-    }
-  };
+    };
+  }
 
   // string of received message
   char receivedMessage[100] = "";
@@ -332,16 +369,8 @@ public:
       String message = "" /* message to send */,
       String value = "" /* value to send */)
   {
-    // send
-    // - - current parameter
-    // - - parameter
 
-    // receive
-    // - - current parameter
-    // - - parameter
-
-
-    // send message
+    // SEND
     if (api_active & message != "")
     {
       // switch
@@ -349,19 +378,24 @@ public:
       {
         Serial.println("currentParameter|| " + String(currentParameter));
         Serial.println("currentName|| " + String(parameterNames[currentParameter]));
-        Serial.println("currentValue|| " + String(parameterValues[currentParameter]));
         Serial.println("parameterValueRangeMin|| " + String(parameterValueRange[currentParameter][0]));
         Serial.println("parameterValueRangeMax|| " + String(parameterValueRange[currentParameter][1]));
+        Serial.println("setupCurrentValue|| " + String(parameterValues[currentParameter]));
+
+        // change encoder first value to fit slider value
+        int stepSize = 4096 / parameterValueRange[currentParameter][2];
+        currentEncoderVal[2] = currentEncoderVal[0] - (parameterValues[currentParameter] * stepSize);
 
         return;
       }
-      else if (message == "updateValue") // update slider, if change detected 
+      else if (message == "updateCurrentValue") // update slider, if change detected
       {
         // check for changes
-        if (parameterValuePrev != parameterValues[currentParameter])
+
+        if (parameterValues[currentParameter] != parameterValuePrev)
         {
           // send message
-          Serial.println("currentValue|| " + String(parameterValues[currentParameter]));
+          Serial.println("updateCurrentValue|| " + String(parameterValues[currentParameter]));
 
           // set previous value
           parameterValuePrev = parameterValues[currentParameter];
@@ -369,9 +403,9 @@ public:
 
         return;
       }
-      else if (message == "disableParameter") // stop interaction with displays and dial 
+      else if (message == "disableParameter") // stop interaction with displays and dial
       {
-        Serial.println("currentParameter||-1");
+        Serial.println("reset");
         return;
       }
     }
@@ -384,93 +418,56 @@ public:
       receivedData = getMessage(receivedString);
     }
 
-    // DIY switch case
-    if (receivedData.message == "currentValue") // write current value to variable, … 
+    // RECEIVE
+
+    // … change name, range, value usw. to new or no parameter, …
+    if (receivedData.message == "setupCurrentParameter")
     {
-      if (parameterValues[currentParameter] == 4)
+      // set current parameter iPad
+      currentParameter = 4;
+
+      // reset …
+      currentEncoderVal[3] = 0; // … startingpoint
+      currentEncoderVal[4] = 0; // … rotations
+    }
+
+    // … get min
+    else if (receivedData.message == "parameterValueRangeMin")
+    {
+      parameterValueRange[currentParameter][0] = receivedData.value.toInt();
+    }
+
+    // … get max
+    else if (receivedData.message == "parameterValueRangeMax")
+    {
+      // set parameter value range max iPad
+      parameterValueRange[currentParameter][1] = receivedData.value.toInt();
+    }
+
+    // setup current value to variable, …
+    else if (receivedData.message == "setupCurrentValue")
+    {
+      if (currentParameter == 4)
       {
         Serial.println("custom parameter");
         // set parameter to value of selected parameter
         parameterValues[4] = receivedData.value.toInt();
       }
     }
-    else if (receivedData.message == "currentParameter") // … change name, range, value usw. to new or no parameter, … 
+
+    // disable current parameter, …
+    else if (receivedData.message == "stopCurrentParameter")
     {
       // set current parameter iPad
-      currentParameter = receivedData.value.toInt();
-
-      //
-      if (currentParameter == 4)
-      {
-        // reset
-        currentEncoderVal[3] = 0; // startingpoint
-        currentEncoderVal[4] = 0; // rotations
-      }
+      currentParameter = -1;
     }
-    else if (receivedData.message == "parameterValueRangeMin") // … get min and max range and … 
+
+    // update current value to variable, …
+    else if (receivedData.message == "updateCurrentValue")
     {
-      // set parameter value range min iPad
-      parameterValueRange[currentParameter][0] = receivedData.value.toInt();
+      // set parameter to value of selected parameter
+      parameterValues[currentParameter] = receivedData.value.toInt();
     }
-    else if (receivedData.message == "parameterValueRangeMax") // … update slider info 
-    {
-      // set parameter value range max iPad
-      parameterValueRange[currentParameter][1] = receivedData.value.toInt();
-
-      // calculate size of range
-      int range = parameterValueRange[currentParameter][1] - parameterValueRange[currentParameter][0];
-
-      if (range <= 20)
-      {
-        parameterValueRange[currentParameter][2] = 20;
-      }
-      else if (range <= 40)
-      {
-        parameterValueRange[currentParameter][2] = 40;
-      }
-      else if (range <= 80)
-      {
-        parameterValueRange[currentParameter][2] = 60;
-      }
-    }
-
-
-    // else if (receivedData.message == "parameterValueRange")
-    // {
-    //   // set parameter value range iPad
-    //   parameterValueRange[currentParameter][0] = receivedData.value.substring(0, receivedData.value.indexOf(",")).toInt();
-    //   parameterValueRange[currentParameter][1] = receivedData.value.substring(receivedData.value.indexOf(",") + 1).toInt();
-    // }
-    // else if (receivedData.message == "parameterValue")
-    // {
-    //   // set parameter value iPad
-    //   parameterValues[currentParameter] = receivedData.value.toInt();
-    // }
-    // else if (receivedData.message == "parameterName")
-    // {
-    //   // set parameter name iPad
-    //   parameterNames[currentParameter] = receivedData.value;
-    // }
-    // else if (receivedData.message == "parameter")
-    // {
-    //   // set parameter iPad
-    //   parameterValues[receivedData.value.toInt()] = receivedData.value.substring(receivedData.value.indexOf(",") + 1).toInt();
-    // }
-    // else if (receivedData.message == "activateParameter")
-    // {
-    //   // activate parameter iPad
-    //   activateParameter(receivedData.value.toInt());
-    // }
-    // else if (receivedData.message == "disableParameter")
-    // {
-    //   // disable parameter iPad
-    //   activateParameter(-1);
-    // }
-    // else if (receivedData.message == "updateValue")
-    // {
-    //   // update value iPad
-    //   parameterValues[receivedData.value.toInt()] = receivedData.value.substring(receivedData.value.indexOf(",") + 1).toInt();
-    // }
   }
 };
 
@@ -479,23 +476,26 @@ Parameters parameters;
 void setup(void)
 {
   Serial.begin(9600);
+
   pinMode(DIR_PIN, OUTPUT);
   Wire.begin();
-  
 
   // set Pin Modes
-  for (int i = 0; i < parameters.numberOfParameters; i++)
+  for (int i = 0; i < parameters.numberOfDisplays; i++)
+  // for (int i = 1; i < parameters.numberOfDisplays; i++)
   {
     pinMode(parameters.displaySelect[i], OUTPUT);
     pinMode(parameters.displayButtonPins[i], INPUT);
 
-
     // set pull-up resistor
     parameters.selectDisplay(i);
+    Serial.print("display #" + String(i));
     u8g2.begin();
+    Serial.println(" ready");
   }
 
   parameters.disableParametersAll();
+  // done
 }
 
 void loop(void)
