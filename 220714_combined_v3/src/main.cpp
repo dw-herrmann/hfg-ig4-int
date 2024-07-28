@@ -455,8 +455,6 @@ public:
     //     return;
     //   }
     // }
-
-
   }
 };
 
@@ -516,5 +514,5 @@ void loop(void)
   }
 
   // deley between each page
-  delay(80);
+  delay(40);
 }

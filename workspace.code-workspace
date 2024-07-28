@@ -1,6 +1,7 @@
 {
 	"folders": [
 		{
+			"name": "hfg-ig4-int",
 			"path": "."
 		},
 		{
@@ -24,6 +25,7 @@
 			"path": "stepper_motor"
 		},
 		{
+			"name": "motor_brushless",
 			"path": "motor_brushless"
 		},
 		{
@@ -51,12 +53,16 @@
 			"path": "220714_combined_v2"
 		},
 		{
+			"name": "test_simple_foc",
+			"path": "test_simple_foc"
+		},
+		{
 			"name": "220714_combined_v3",
 			"path": "220714_combined_v3"
 		},
 		{
-			"name": "test_simple_foc",
-			"path": "test_simple_foc"
+			"name": "arduino_test",
+			"path": "arduino_test"
 		}
 	],
 	"settings": {
